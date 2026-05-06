@@ -4,52 +4,52 @@ import time
 import pandas as pd
 
 # ==========================================
-# 1. 글로벌 상태 관리 (MatchState - 글로벌 서버 메모리)
+# 1. 동적 데이터 세팅 (Session State 로 풀 관리)
 # ==========================================
-# 모든 사용자가 실시간으로 공유하는 메인 DB 역할을 합니다.
+if 'map_pool' not in st.session_state:
+    st.session_state.map_pool = {
+        "Control": ["Busan", "Lijiang Tower", "Oasis"],
+        "Hybrid": ["Blizzard World", "Midtown", "Numbani"],
+        "Push / Flashpoint": ["Esperanca", "Runasapi", "Aatlis", "Suravasa"],
+        "Escort": ["Havana", "Rialto", "Watchpoint: Gibraltar"]
+    }
+
+if 'hero_pool' not in st.session_state:
+    st.session_state.hero_pool = {
+        "DPS": ["Anran", "Ashe", "Bastion", "Cassidy", "Echo", "Emre", "Freja", 
+                "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper", "Sierra", 
+                "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Vendetta", "Venture", "Widowmaker"],
+        "Tank": ["D.Va", "Domina", "Doomfist", "Hazard", "Junker Queen", "Mauga", "Orisa", 
+                 "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Wrecking Ball", "Zarya"],
+        "SUP": ["Ana", "Baptiste", "Brigitte", "Illari", "Jetpack Cat", "Juno", "Kiriko", 
+                "Lifeweaver", "Lúcio", "Mercy", "Mizuki", "Moira", "Wuyang", "Zenyatta"]
+    }
+
+if 'presets' not in st.session_state:
+    st.session_state.presets = {
+        "CB": ["Argon", "ZeSin", "FARMER", "SeungAn", "WoochaN", "Faith"],
+        "CR": ["LIP", "HeeSang", "Stalk3r", "JunBin", "MAX", "CH0R0NG", "vigilante"],
+        "NE": ["perr", "D0D0", "SoLA", "Yate", "MCD", "Secret"],
+        "PF": ["M1NUT2", "D4RT", "FEARFUL", "Gur3um", "TenTen", "Sp1nel", "CARU"],
+        "RONG": ["HAKSAL", "Kilo", "SP1NT", "Attack", "OPENER", "iRONY"],
+        "T1": ["Proud", "ZEST", "DONGHAK", "Jasm1ne", "Bliss", "skewed"],
+        "FLC": ["Sp9rk1e", "Checkmate", "Mer1t", "HanBin", "Someone", "ChiYo", "Fielder"],
+        "ZAN": ["A1IEN", "Becky", "Heiser", "YangJun", "KIVIS", "Havira"],
+        "ZETA": ["Proper", "Knife", "Bernar", "Mealgaru", "Shu", "Viol2t"]
+    }
+
+# ==========================================
+# 2. 글로벌 상태 관리 (MatchState)
+# ==========================================
 @st.cache_resource
 class MatchState:
     def __init__(self):
-        # 🔗 권한 토큰
         self.tokens = {"Admin": "admin123", "Team A": "a_team", "Team B": "b_team"}
-        
-        # 🛠️ 동적 풀(Pool) 관리 (어드민이 변경하면 모두에게 실시간 반영됨)
-        self.map_pool = {
-            "Control": ["Busan", "Lijiang Tower", "Oasis"],
-            "Hybrid": ["Blizzard World", "Midtown", "Numbani"],
-            "Push / Flashpoint": ["Esperanca", "Runasapi", "Aatlis", "Suravasa"],
-            "Escort": ["Havana", "Rialto", "Watchpoint: Gibraltar"]
-        }
-        
-        self.hero_pool = {
-            "DPS": ["Anran", "Ashe", "Bastion", "Cassidy", "Echo", "Emre", "Freja", 
-                    "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper", "Sierra", 
-                    "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Vendetta", "Venture", "Widowmaker"],
-            "Tank": ["D.Va", "Domina", "Doomfist", "Hazard", "Junker Queen", "Mauga", "Orisa", 
-                     "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Wrecking Ball", "Zarya"],
-            "SUP": ["Ana", "Baptiste", "Brigitte", "Illari", "Jetpack Cat", "Juno", "Kiriko", 
-                    "Lifeweaver", "Lúcio", "Mercy", "Mizuki", "Moira", "Wuyang", "Zenyatta"]
-        }
-        
-        self.presets = {
-            "CB": ["Argon", "ZeSin", "FARMER", "SeungAn", "WoochaN", "Faith"],
-            "CR": ["LIP", "HeeSang", "Stalk3r", "JunBin", "MAX", "CH0R0NG", "vigilante"],
-            "NE": ["perr", "D0D0", "SoLA", "Yate", "MCD", "Secret"],
-            "PF": ["M1NUT2", "D4RT", "FEARFUL", "Gur3um", "TenTen", "Sp1nel", "CARU"],
-            "RONG": ["HAKSAL", "Kilo", "SP1NT", "Attack", "OPENER", "iRONY"],
-            "T1": ["Proud", "ZEST", "DONGHAK", "Jasm1ne", "Bliss", "skewed"],
-            "FLC": ["Sp9rk1e", "Checkmate", "Mer1t", "HanBin", "Someone", "ChiYo", "Fielder"],
-            "ZAN": ["A1IEN", "Becky", "Heiser", "YangJun", "KIVIS", "Havira"],
-            "ZETA": ["Proper", "Knife", "Bernar", "Mealgaru", "Shu", "Viol2t"]
-        }
-
-        # 🏷️ 경기 기본 정보
         self.tournament_name = "2026 OWCS KOREA Stage 1"
         self.match_title = "4/26 Match 1"
         self.team_names = {"Team A": "Team A", "Team B": "Team B"}
         self.full_rosters = {"Team A": [], "Team B": []}
         
-        # 📊 경기 기록 및 진행 현황
         self.match_score = {"Team A": 0, "Team B": 0}
         self.current_set = 1
         self.phase = "SETUP" 
@@ -66,7 +66,6 @@ class MatchState:
         self.prev_rosters = {"Team A": [], "Team B": []}
         self.team_warnings = {"Team A": 0, "Team B": 0}
         
-        # ⏱️ 타이머 로직
         self.timer_running = False
         self.interaction_enabled = False 
         self.start_time = 0
@@ -120,14 +119,13 @@ class MatchState:
 
 state = MatchState()
 
-# (개인 브라우저용 임시 선택값)
 if 'temp_mode' not in st.session_state: st.session_state.temp_mode = ""
 if 'temp_map' not in st.session_state: st.session_state.temp_map = ""
 if 'temp_hero' not in st.session_state: st.session_state.temp_hero = ""
 if 'temp_selected_role' not in st.session_state: st.session_state.temp_selected_role = ""
 
 # ==========================================
-# 2. 권한 인증
+# 3. 권한 인증
 # ==========================================
 raw_token = "observer"
 if hasattr(st, "query_params"):
@@ -148,7 +146,7 @@ st.set_page_config(layout="wide", page_title="OWCS Pro Dashboard")
 st_autorefresh(interval=1000, key="data_refresh")
 
 # ==========================================
-# 3. 타이머 컴포넌트
+# 4. 타이머 컴포넌트
 # ==========================================
 def render_timer(default_time, overtime=30, active_team=None):
     if not state.timer_running or not active_team:
@@ -194,7 +192,7 @@ def render_timer(default_time, overtime=30, active_team=None):
         st.markdown(f"<div style='text-align:center; padding:10px; font-size:24px; font-weight:bold; color:#2E86C1; border-bottom:3px solid #2E86C1;'>⏱️ {label}: {rem}s</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. 선수용 상단 정보 노트 
+# 선수용 상단 정보 노트
 # ==========================================
 def render_player_header(team_key):
     st.markdown(f"### 🎮 {state.team_names[team_key]} Dashboard (Set {state.current_set})")
@@ -274,7 +272,58 @@ def render_player_header(team_key):
         st.warning("⏳ Clicks are locked until the Admin starts the timer.")
 
 # ==========================================
-# 5. 어드민 사이드바 (Admin만 보이도록 완벽 분리)
+# 5. 무대 배치도(좌석 지정) 렌더링 함수
+# ==========================================
+def render_stage_roster_selection(team_key):
+    st.markdown("**👥 2. Roster Setup (Stage Layout)**")
+    
+    # 스크린 및 팀 명 디자인
+    st.markdown("""
+        <div style='text-align:center; background:#1A5276; color:white; padding:12px; margin-bottom:10px; border-radius:5px; font-weight:bold; font-size:18px; letter-spacing: 2px;'>
+            SCREEN
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+        <div style='text-align:center; background:#2980B9; color:white; padding:8px; margin-bottom:20px; border-radius:5px; font-weight:bold; font-size:16px;'>
+            {state.team_names[team_key]} SEATS
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 5칸 할당 초기화
+    if f"picks_{team_key}" not in st.session_state or len(st.session_state[f"picks_{team_key}"]) != 5:
+        if state.current_set == 1:
+            st.session_state[f"picks_{team_key}"] = ["(Empty)", "(Empty)", "(Empty)", "(Empty)", "(Empty)"]
+        else:
+            prev = list(state.prev_rosters[team_key])
+            # 빈칸 채우기
+            st.session_state[f"picks_{team_key}"] = prev + ["(Empty)"] * (5 - len(prev))
+
+    roster_opts = ["(Empty)"] + state.full_rosters[team_key]
+    seat_labels = ["⚔️ DPS 1", "⚔️ DPS 2", "🛡️ TANK", "💉 SUP 1", "💉 SUP 2"]
+    
+    cols = st.columns(5)
+    current_picks = []
+    
+    for i in range(5):
+        with cols[i]:
+            val = st.session_state[f"picks_{team_key}"][i]
+            idx = roster_opts.index(val) if val in roster_opts else 0
+            
+            selected = st.selectbox(
+                seat_labels[i], 
+                roster_opts, 
+                index=idx, 
+                key=f"slot_{i}_{state.phase}", 
+                disabled=(not state.interaction_enabled)
+            )
+            current_picks.append(selected)
+            st.session_state[f"picks_{team_key}"][i] = selected
+            
+    return current_picks
+
+# ==========================================
+# 6. 어드민 사이드바
 # ==========================================
 if my_role == "Admin":
     with st.sidebar:
@@ -301,45 +350,54 @@ if my_role == "Admin":
             st.code(f"{team_b_label}: {base_url}/?token={state.tokens['Team B']}")
 
         with st.expander("🛠️ 2. 팀 프리셋(Roster) 관리"):
-            preset_action = st.selectbox("기존 팀 관리", ["새 팀 추가"] + list(state.presets.keys()))
+            preset_action = st.selectbox("기존 팀 관리", ["새 팀 추가"] + list(st.session_state.presets.keys()))
             new_t_name = st.text_input("팀명", preset_action if preset_action != "새 팀 추가" else "")
-            new_t_roster = st.text_area("로스터 (쉼표)", ", ".join(state.presets[preset_action]) if preset_action != "새 팀 추가" else "")
-            if st.button("💾 프리셋 저장"):
-                state.presets[new_t_name] = [x.strip() for x in new_t_roster.split(",") if x.strip()]
-                st.rerun()
+            new_t_roster = st.text_area("로스터 (쉼표)", ", ".join(st.session_state.presets[preset_action]) if preset_action != "새 팀 추가" else "")
+            
+            c_btn1, c_btn2 = st.columns(2)
+            with c_btn1:
+                if st.button("💾 프리셋 저장"):
+                    if new_t_name:
+                        st.session_state.presets[new_t_name] = [x.strip() for x in new_t_roster.split(",") if x.strip()]
+                        st.success(f"[{new_t_name}] 저장 완료!")
+                        st.rerun()
+            with c_btn2:
+                if preset_action != "새 팀 추가" and st.button("❌ 삭제"):
+                    del st.session_state.presets[preset_action]
+                    st.success(f"[{preset_action}] 삭제 완료!")
+                    st.rerun()
 
-        # [업데이트] 맵/영웅풀을 글로벌 state(서버 메모리)에서 직접 관리하여 실시간 연동
         with st.expander("🛠️ 3. 맵 및 영웅 풀(Pool) 관리"):
             st.markdown("전장 및 영웅 목록을 쉼표(,)로 구분하여 추가/수정/삭제할 수 있습니다.")
             st.markdown("#### 🗺️ 맵 풀 (Map Pool)")
             new_maps = {}
-            for mode, maps in state.map_pool.items():
+            for mode, maps in st.session_state.map_pool.items():
                 new_maps[mode] = st.text_area(f"{mode} Maps", ", ".join(maps), key=f"mp_{mode}")
             
             st.markdown("#### 🦸 영웅 풀 (Hero Pool)")
             new_heroes = {}
-            for role, heroes in state.hero_pool.items():
+            for role, heroes in st.session_state.hero_pool.items():
                 new_heroes[role] = st.text_area(f"{role} Heroes", ", ".join(heroes), key=f"hp_{role}")
                 
             if st.button("💾 맵/영웅 풀 전체 업데이트", type="primary"):
                 for mode in new_maps:
-                    state.map_pool[mode] = [m.strip() for m in new_maps[mode].split(",") if m.strip()]
+                    st.session_state.map_pool[mode] = [m.strip() for m in new_maps[mode].split(",") if m.strip()]
                 for role in new_heroes:
-                    state.hero_pool[role] = [h.strip() for h in new_heroes[role].split(",") if h.strip()]
-                st.success("맵과 영웅 목록이 모든 클라이언트에 업데이트되었습니다!")
+                    st.session_state.hero_pool[role] = [h.strip() for h in new_heroes[role].split(",") if h.strip()]
+                st.success("맵과 영웅 목록이 업데이트되었습니다!")
                 st.rerun()
 
         with st.expander("⚙️ 4. 경기 초기 세팅", expanded=(state.phase=="SETUP")):
             tourney = st.text_input("대회명", state.tournament_name)
-            preset_opts = ["직접 입력"] + list(state.presets.keys())
+            preset_opts = ["직접 입력"] + list(st.session_state.presets.keys())
             c_p1, c_p2 = st.columns(2)
             preset_a = c_p1.selectbox("Team A 프리셋", preset_opts)
             preset_b = c_p2.selectbox("Team B 프리셋", preset_opts)
             title = st.text_input("매치명", state.match_title)
             name_a = st.text_input("Team A 이름", preset_a if preset_a != "직접 입력" else state.team_names["Team A"])
             name_b = st.text_input("Team B 이름", preset_b if preset_b != "직접 입력" else state.team_names["Team B"])
-            rost_a = st.text_area(f"{name_a} 로스터", ", ".join(state.presets[preset_a]) if preset_a != "직접 입력" else "")
-            rost_b = st.text_area(f"{name_b} 로스터", ", ".join(state.presets[preset_b]) if preset_b != "직접 입력" else "")
+            rost_a = st.text_area(f"{name_a} 로스터", ", ".join(st.session_state.presets[preset_a]) if preset_a != "직접 입력" else "")
+            rost_b = st.text_area(f"{name_b} 로스터", ", ".join(st.session_state.presets[preset_b]) if preset_b != "직접 입력" else "")
             
             if st.button("✅ 경기 시작", type="primary"):
                 state.tournament_name = tourney
@@ -370,7 +428,7 @@ if my_role == "Admin":
             if st.button("🚨 경기 강제 종료"): state.phase = "MATCH_SUMMARY"; st.rerun()
 
 # ==========================================
-# 6. 대시보드 렌더링 (어드민/관전자용)
+# 7. 대시보드 렌더링 (어드민/관전자용)
 # ==========================================
 CSS_BLOCK = """
 <style>
@@ -399,9 +457,8 @@ def render_dashboard():
         elif map_name in state.used_maps: return f"<td{cs} style='background-color: #D3D3D3; color: #888; text-decoration: line-through;'>{map_name}</td>"
         return f"<td{cs}>{map_name}</td>"
 
-    # 동적으로 컬럼(TD) 생성
     def get_map_cells(mode):
-        maps = state.map_pool.get(mode, [])
+        maps = st.session_state.map_pool.get(mode, [])
         cells = ""
         if not maps: return "<td colspan='4'></td>"
         for i, m in enumerate(maps):
@@ -490,9 +547,9 @@ def render_dashboard():
             h_html += "</tr>"
         return h_html
 
-    hero_html = build_hero_grid("DPS", state.hero_pool.get("DPS", [])) + \
-                build_hero_grid("Tank", state.hero_pool.get("Tank", [])) + \
-                build_hero_grid("SUP", state.hero_pool.get("SUP", []))
+    hero_html = build_hero_grid("DPS", st.session_state.hero_pool.get("DPS", [])) + \
+                build_hero_grid("Tank", st.session_state.hero_pool.get("Tank", [])) + \
+                build_hero_grid("SUP", st.session_state.hero_pool.get("SUP", []))
     
     st.markdown(CSS_BLOCK + " ".join(html.split()), unsafe_allow_html=True)
     st.markdown(f"<table class='owcs-board'>{hero_html}</table>", unsafe_allow_html=True)
@@ -501,7 +558,7 @@ if state.phase != "SETUP" and my_role in ["Admin", "Observer"]:
     render_dashboard()
 
 # ==========================================
-# 7. 단계별 로직
+# 8. 단계별 로직
 # ==========================================
 st.markdown("<style>.stButton>button { width: 100%; font-weight: bold; }</style>", unsafe_allow_html=True)
 
@@ -529,8 +586,7 @@ if state.phase == "MAP_PICK":
         render_player_header(my_role)
         st.subheader("📍 1. Map & Side Selection")
         
-        # [업데이트] 글로벌 서버 메모리의 map_pool 사용
-        for mode, maps in state.map_pool.items():
+        for mode, maps in st.session_state.map_pool.items():
             if mode in state.used_modes: continue
             map_chunks = [maps[i:i+4] for i in range(0, max(len(maps), 1), 4)]
             for chunk_idx, chunk in enumerate(map_chunks):
@@ -557,29 +613,25 @@ if state.phase == "MAP_PICK":
         with col_s:
             side = st.radio("Select Side", ["BLUE (Defend First)", "RED (Attack First)"], disabled=(not state.interaction_enabled))
         with col_r:
-            st.markdown("**👥 2. Roster Check (Click to select/deselect)**")
-            if f"picks_{my_role}" not in st.session_state:
-                st.session_state[f"picks_{my_role}"] = list(state.prev_rosters[my_role])
-            p_list = st.session_state[f"picks_{my_role}"]
-            p_cols = st.columns(4)
-            for i, p in enumerate(state.full_rosters[my_role]):
-                with p_cols[i%4]:
-                    is_p = p in p_list
-                    if st.button(f"✅ {p}" if is_p else p, type="primary" if is_p else "secondary", disabled=(not state.interaction_enabled), key=f"r_{p}"):
-                        if is_p: p_list.remove(p)
-                        elif len(p_list) < 5: p_list.append(p)
-                        st.rerun()
-            st.caption(f"Currently {len(p_list)} selected (5 required)")
+            # [업데이트] 시각적 무대 좌석 UI 적용
+            p_list = render_stage_roster_selection(my_role)
 
-        if st.button("🚀 Submit", type="primary", disabled=(not state.interaction_enabled)):
-            if not st.session_state.temp_map: st.error("Please select a map first.")
-            elif len(p_list) != 5: st.error("Roster must be exactly 5 players.")
+        st.divider()
+        if st.button("🚀 Final Submit", type="primary", disabled=(not state.interaction_enabled)):
+            valid_picks = [p for p in p_list if p != "(Empty)"]
+            
+            if not st.session_state.temp_map: 
+                st.error("Please select a map first.")
+            elif len(valid_picks) != 5: 
+                st.error("Please fill all 5 seats.")
+            elif len(set(valid_picks)) != 5:
+                st.error("Duplicate players found! A player can only take one seat.")
             else:
                 state.selected_mode, state.selected_map = st.session_state.temp_mode, st.session_state.temp_map
                 if "BLUE" in side: state.side_blue, state.side_red = my_role, ("Team B" if my_role=="Team A" else "Team A")
                 else: state.side_red, state.side_blue = my_role, ("Team B" if my_role=="Team A" else "Team A")
                 state.add_timing_log("Map/Side Selection", my_role)
-                submit_roster_logic(my_role, p_list, is_map_pick=True)
+                submit_roster_logic(my_role, valid_picks, is_map_pick=True)
                 
     elif my_role in ["Team A", "Team B"]:
         render_player_header(my_role); st.info("The opponent is selecting the map and roster... (Sub info hidden)")
@@ -597,24 +649,19 @@ elif state.phase == "SUB_PICK_A":
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("**👥 Check & Sub Our Roster**")
-        if f"picks_{my_role}" not in st.session_state:
-            st.session_state[f"picks_{my_role}"] = list(state.prev_rosters[my_role])
-        p_list = st.session_state[f"picks_{my_role}"]
-        p_cols = st.columns(4)
-        for i, p in enumerate(state.full_rosters[my_role]):
-            with p_cols[i%4]:
-                is_p = p in p_list
-                if st.button(f"✅ {p}" if is_p else p, type="primary" if is_p else "secondary", disabled=(not state.interaction_enabled), key=f"r2_{p}"):
-                    if is_p: p_list.remove(p)
-                    elif len(p_list) < 5: p_list.append(p)
-                    st.rerun()
+        p_list = render_stage_roster_selection(my_role)
         
+        st.divider()
         if st.button("🚀 Submit Roster", type="primary", disabled=(not state.interaction_enabled)):
-            if len(p_list) != 5: st.error("Roster must be exactly 5 players.")
+            valid_picks = [p for p in p_list if p != "(Empty)"]
+            
+            if len(valid_picks) != 5: 
+                st.error("Please fill all 5 seats.")
+            elif len(set(valid_picks)) != 5:
+                st.error("Duplicate players found! A player can only take one seat.")
             else:
                 state.add_timing_log("Roster Selection", my_role)
-                submit_roster_logic(my_role, p_list, is_map_pick=False)
+                submit_roster_logic(my_role, valid_picks, is_map_pick=False)
     elif my_role in ["Team A", "Team B"]:
         render_player_header(my_role); st.info("The opponent is deciding their roster...")
 
@@ -659,10 +706,9 @@ elif state.phase in ["BAN_1", "BAN_2"]:
                     if st.button(f"🚫 {h}" if is_u else (f"✅ {h}" if st.session_state.temp_hero==h else h), disabled=(is_u or is_l or not state.interaction_enabled), key=f"bh_{h}"):
                         st.session_state.temp_hero, st.session_state.temp_selected_role = h, role; st.rerun()
                         
-        # [업데이트] 글로벌 서버 메모리의 hero_pool 사용
-        render_heroes("DPS", state.hero_pool.get("DPS", []))
-        render_heroes("Tank", state.hero_pool.get("Tank", []))
-        render_heroes("SUP", state.hero_pool.get("SUP", []))
+        render_heroes("DPS", st.session_state.hero_pool.get("DPS", []))
+        render_heroes("Tank", st.session_state.hero_pool.get("Tank", []))
+        render_heroes("SUP", st.session_state.hero_pool.get("SUP", []))
         
         if st.session_state.temp_hero and st.button(f"🚀 Confirm {st.session_state.temp_hero} Ban", type="primary", disabled=(not state.interaction_enabled)):
             state.add_timing_log("Hero Ban", cur)
