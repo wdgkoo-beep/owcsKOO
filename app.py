@@ -91,12 +91,22 @@ class MatchState:
         self.interaction_enabled = False
         self.warning_processed = False
 
+    # [업데이트] 자리 이동도 교체로 인식하도록 인덱스 단위로 비교
     def calc_subs(self, team_key, new_roster):
         if self.current_set == 1: return [], []
-        prev = set(self.prev_rosters[team_key])
-        curr = set(new_roster)
-        if not prev: return [], []
-        return list(curr - prev), list(prev - curr)
+        prev = self.prev_rosters[team_key]
+        curr = new_roster
+        
+        if not prev or len(prev) != len(curr): 
+            return [], []
+            
+        ins = []
+        outs = []
+        for p, c in zip(prev, curr):
+            if p != c:
+                outs.append(p)
+                ins.append(c)
+        return ins, outs
 
     def start_timer(self):
         self.timer_running = True
@@ -277,7 +287,6 @@ def render_player_header(team_key):
 def render_stage_roster_selection(team_key):
     st.markdown("**👥 2. Roster Setup (Stage Layout)**")
     
-    # 스크린 및 팀 명 디자인
     st.markdown("""
         <div style='text-align:center; background:#1A5276; color:white; padding:12px; margin-bottom:10px; border-radius:5px; font-weight:bold; font-size:18px; letter-spacing: 2px;'>
             SCREEN
@@ -290,13 +299,11 @@ def render_stage_roster_selection(team_key):
         </div>
     """, unsafe_allow_html=True)
 
-    # 5칸 할당 초기화
     if f"picks_{team_key}" not in st.session_state or len(st.session_state[f"picks_{team_key}"]) != 5:
         if state.current_set == 1:
             st.session_state[f"picks_{team_key}"] = ["(Empty)", "(Empty)", "(Empty)", "(Empty)", "(Empty)"]
         else:
             prev = list(state.prev_rosters[team_key])
-            # 빈칸 채우기
             st.session_state[f"picks_{team_key}"] = prev + ["(Empty)"] * (5 - len(prev))
 
     roster_opts = ["(Empty)"] + state.full_rosters[team_key]
@@ -340,14 +347,16 @@ if my_role == "Admin":
                 state.tokens["Team A"] = new_tk_a.strip()
                 state.tokens["Team B"] = new_tk_b.strip()
                 st.rerun()
-            base_url = st.text_input("기본 주소", "http://localhost:8501").rstrip('/')
+                
+            # [업데이트] 주소 뒤에 / 가 생기지 않도록 깔끔하게 처리
+            base_url = st.text_input("기본 주소", "https://owcskoo3.streamlit.app").rstrip('/')
             
             team_a_label = state.team_names['Team A'] if state.team_names['Team A'] != "Team A" else "A팀"
             team_b_label = state.team_names['Team B'] if state.team_names['Team B'] != "Team B" else "B팀"
             
-            st.code(f"Admin: {base_url}/?token={state.tokens['Admin']}")
-            st.code(f"{team_a_label}: {base_url}/?token={state.tokens['Team A']}")
-            st.code(f"{team_b_label}: {base_url}/?token={state.tokens['Team B']}")
+            st.code(f"Admin: {base_url}?token={state.tokens['Admin']}")
+            st.code(f"{team_a_label}: {base_url}?token={state.tokens['Team A']}")
+            st.code(f"{team_b_label}: {base_url}?token={state.tokens['Team B']}")
 
         with st.expander("🛠️ 2. 팀 프리셋(Roster) 관리"):
             preset_action = st.selectbox("기존 팀 관리", ["새 팀 추가"] + list(st.session_state.presets.keys()))
@@ -613,7 +622,6 @@ if state.phase == "MAP_PICK":
         with col_s:
             side = st.radio("Select Side", ["BLUE (Defend First)", "RED (Attack First)"], disabled=(not state.interaction_enabled))
         with col_r:
-            # [업데이트] 시각적 무대 좌석 UI 적용
             p_list = render_stage_roster_selection(my_role)
 
         st.divider()
